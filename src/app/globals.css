@@ -12,7 +12,7 @@
   --color-line: #dededb;
   --color-chip: #f2f2ef;
 
-  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), var(--font-malayalam), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -62,6 +62,38 @@ body {
 .reveal-ready [data-reveal].is-in > * {
   opacity: 1;
   transform: none;
+}
+
+/* Hero background: faint perspective grid with a few thin gliding lights */
+.hg-lines line {
+  stroke: rgb(22 22 22 / 0.07);
+}
+
+.hg-beam {
+  fill: none;
+  stroke: rgb(56 152 236);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 0.07 1.2;
+  stroke-dashoffset: 0;
+  opacity: 0;
+  vector-effect: non-scaling-stroke;
+  animation: hg-glide var(--dur, 7s) cubic-bezier(0.4, 0, 0.3, 1) var(--delay, 0s) infinite;
+}
+@keyframes hg-glide {
+  0% {
+    stroke-dashoffset: -0.15;
+    opacity: 0;
+  }
+  10%,
+  40% {
+    opacity: 0.85;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: -0.95;
+    opacity: 0;
+  }
 }
 
 /* Links: underline grows from the left */
@@ -142,7 +174,268 @@ body {
   transform: translate(2px, -2px);
 }
 
+/* AI chat: live dot, typing dots, message fade-in */
+.ai-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5);
+  animation: ai-pulse 2s ease-out infinite;
+}
+@keyframes ai-pulse {
+  to {
+    box-shadow: 0 0 0 7px rgb(34 197 94 / 0);
+  }
+}
+.chat-msg {
+  animation: chat-in 0.4s var(--ease-out) both;
+}
+@keyframes chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.typing {
+  display: inline-flex;
+  gap: 4px;
+  padding: 6px 0;
+}
+.typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-mute);
+  animation: typing 1.2s ease-in-out infinite;
+}
+.typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Floating AI orb button + chat panel */
+.orb-btn {
+  border-radius: 999px;
+  transition: transform 0.35s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.orb-btn:hover {
+  transform: scale(1.05);
+}
+.orb-btn:active {
+  transform: scale(0.94);
+}
+/* same as tensorthoughts.ai: a slow breathe, 100% → 95% → 100% every 4s */
+.orb-spin {
+  animation: orb-breathe 4s ease-in-out infinite;
+  filter: drop-shadow(0 10px 18px rgb(110 90 255 / 0.35));
+}
+@keyframes orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+}
+/* glowing pulse rings behind the orb */
+.orb-ring {
+  position: absolute;
+  inset: 4%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgb(120 110 255 / 0.45), rgb(255 120 180 / 0.25) 60%, transparent 72%);
+  animation: orb-ring 2.8s ease-out infinite;
+  pointer-events: none;
+}
+.orb-ring-2 {
+  animation-delay: 1.4s;
+}
+@keyframes orb-ring {
+  from {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+.orb-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid #fff;
+  animation: badge-pop 0.5s var(--ease-out) 3s both;
+}
+@keyframes badge-pop {
+  from {
+    transform: scale(0);
+  }
+}
+.greet {
+  transform-origin: bottom right;
+  animation: panel-in 0.45s var(--ease-out) both, greet-nudge 4s ease-in-out 1.5s infinite;
+}
+@keyframes greet-nudge {
+  0%,
+  88%,
+  100% {
+    rotate: 0deg;
+  }
+  92% {
+    rotate: -2.5deg;
+  }
+  96% {
+    rotate: 2deg;
+  }
+}
+.orb-tip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  translate: 0 -50%;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--color-line);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink);
+  box-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.3);
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+.orb-btn:hover .orb-tip,
+.orb-btn:focus-visible .orb-tip {
+  opacity: 1;
+}
+.chat-panel {
+  transform-origin: bottom right;
+  animation: panel-in 0.35s var(--ease-out) both;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
+/* Voice: orb reacts while listening / speaking */
+.orb-btn[data-voice="listening"] .orb-ring {
+  background: radial-gradient(circle, rgb(255 80 120 / 0.55), rgb(255 140 80 / 0.25) 60%, transparent 72%);
+  animation-duration: 1.2s;
+}
+.orb-btn[data-voice="speaking"] .orb-ring {
+  animation-duration: 1s;
+}
+.orb-btn[data-voice="speaking"] .orb-spin {
+  animation-duration: 1.4s;
+  filter: drop-shadow(0 0 22px rgb(120 110 255 / 0.7));
+}
+/* pulses with the real loudness of the ElevenLabs voice (--lvl: 0 → 1) */
+.orb-btn[data-voice="speaking"] {
+  scale: calc(1 + var(--lvl, 0) * 0.16);
+  transition: scale 0.08s linear, transform 0.35s var(--ease-out);
+}
+.orb-btn[data-voice="speaking"] .orb-ring {
+  opacity: calc(0.5 + var(--lvl, 0) * 0.8);
+}
+.orb-btn.word .orb-spin {
+  animation: orb-breathe 1.4s ease-in-out infinite, orb-beat 0.28s var(--ease-out);
+}
+@keyframes orb-beat {
+  40% {
+    scale: 1.09;
+  }
+}
+/* mic button pulse while recording */
+.mic.is-on {
+  animation: mic-pulse 1.2s ease-out infinite;
+}
+@keyframes mic-pulse {
+  from {
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0.5);
+  }
+  to {
+    box-shadow: 0 0 0 12px rgb(239 68 68 / 0);
+  }
+}
+/* tiny equaliser on the "Stop" button while an answer is being read */
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+}
+.eq i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  animation: eq 0.9s ease-in-out infinite;
+}
+.eq i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.eq i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hg-beam {
+    display: none;
+  }
+  .mic.is-on,
+  .eq i,
+  .orb-btn,
+  .orb-spin,
+  .orb-ring,
+  .orb-badge,
+  .greet,
+  .chat-panel {
+    animation: none;
+  }
+  .ai-dot,
+  .chat-msg,
+  .typing i {
+    animation: none;
+  }
   html {
     scroll-behavior: auto;
   }

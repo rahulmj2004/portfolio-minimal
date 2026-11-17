@@ -1,7 +1,10 @@
 import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 import { achievements, featured, profile } from "@/content/site";
+import { AskRahul } from "@/components/AskRahul";
+import { ChatLauncher } from "@/components/ChatLauncher";
 import { CopyEmail } from "@/components/CopyEmail";
+import { HeroGrid } from "@/components/HeroGrid";
 import { Reveal } from "@/components/Reveal";
 
 const tools = ["Python", "Django", "React", "Next.js", "TensorFlow", "FastAPI"];
@@ -152,6 +155,7 @@ export default function Home() {
       <main className="mx-auto max-w-[1200px] overflow-hidden bg-card-2 md:rounded-[56px]">
         {/* HERO */}
         <Section index={0} tone="card" className="px-6 pb-14 pt-7 md:px-12 md:pb-26 md:pt-9">
+          <HeroGrid />
           <header style={{ "--d": "0ms" } as CSSProperties} className="enter relative flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <span className="hidden text-sm font-medium text-soft sm:inline">{profile.email}</span>
@@ -301,8 +305,28 @@ export default function Home() {
           </div>
         </Section>
 
+        {/* ASK AI */}
+        <Section id="ask" index={5} tone="card-2" className="px-6 pb-16 md:px-12 md:pb-28">
+          <div data-reveal className="flex flex-col items-center pt-12 text-center md:pt-24">
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1 text-xs font-medium text-soft">
+              <span className="ai-dot" /> AI assistant
+            </span>
+            <h2 style={{ "--i": 1 } as CSSProperties} className="mt-5 text-[30px] font-semibold leading-[1.13] tracking-[-0.03em] md:text-5xl">
+              Ask my portfolio
+              <br />
+              <Grey>anything.</Grey>
+            </h2>
+            <p style={{ "--i": 2 } as CSSProperties} className="mt-4 max-w-[480px] text-[15px] leading-[1.55] text-mute md:text-base">
+              It answers only from my real résumé and projects, and says so when it doesn&apos;t know.
+            </p>
+            <div style={{ "--i": 3 } as CSSProperties} className="mt-8 w-full md:mt-10">
+              <AskRahul />
+            </div>
+          </div>
+        </Section>
+
         {/* CONTACT */}
-        <Section id="contact" index={5} tone="card-2" last className="px-6 pb-8 md:px-12 md:pb-12">
+        <Section id="contact" index={6} tone="card" last className="px-6 pb-8 md:px-12 md:pb-12">
           <div data-reveal className="flex flex-col items-center pt-14 text-center md:pt-30">
             <div className="grid size-18 place-items-center rounded-full border border-line bg-white md:size-22">
               <Icon size={32}>
@@ -329,6 +353,7 @@ export default function Home() {
         </Section>
       </main>
       <Reveal />
+      <ChatLauncher />
     </div>
   );
 }
