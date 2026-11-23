@@ -64,35 +64,109 @@ body {
   transform: none;
 }
 
-/* Hero background: faint perspective grid with a few thin gliding lights */
-.hg-lines line {
-  stroke: rgb(22 22 22 / 0.07);
+/* Hero background: perspective tunnel (ceiling + floor grids) with glowing lane pulses */
+.hgt {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: rgb(14 142 222);
+  border-radius: inherit;
+  contain: paint;
 }
-
-.hg-beam {
-  fill: none;
-  stroke: rgb(56 152 236);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-dasharray: 0.07 1.2;
-  stroke-dashoffset: 0;
-  opacity: 0;
-  vector-effect: non-scaling-stroke;
-  animation: hg-glide var(--dur, 7s) cubic-bezier(0.4, 0, 0.3, 1) var(--delay, 0s) infinite;
+.hgt-plane {
+  position: absolute;
+  left: 50%;
+  width: min(1440px, 110%);
+  transform: translateX(-50%);
 }
-@keyframes hg-glide {
-  0% {
-    stroke-dashoffset: -0.15;
-    opacity: 0;
+.hgt-plane svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.hgt-ceiling {
+  top: 96px;
+  height: 220px;
+  mask-image: linear-gradient(transparent, #000 18%, #000 50%, transparent 96%);
+}
+.hgt-floor {
+  bottom: 0;
+  height: 46%;
+  min-height: 320px;
+  max-height: 480px;
+  opacity: 0.6;
+  mask-image: linear-gradient(transparent, #000 22%, #000 57%, transparent 98%);
+}
+.hgt-lines {
+  opacity: 0.19;
+}
+.hgt-pulse {
+  opacity: 0.45;
+  animation: hgt-pulse 2.5s cubic-bezier(0.62, 0.62, 0.14, 1) 1 both;
+}
+.hgt-ceiling .hgt-pulse {
+  opacity: 0.7;
+  animation-duration: 3s;
+}
+.hgt-wave {
+  opacity: 0.4;
+  animation: hgt-wave 20.4s cubic-bezier(0.62, 0.62, 0, 1) infinite;
+}
+.hgt[data-running="false"] :is(.hgt-pulse, .hgt-wave) {
+  animation-play-state: paused;
+}
+.hgt-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 100px;
+  background: linear-gradient(transparent, var(--color-card));
+}
+@keyframes hgt-pulse {
+  from {
+    transform: translateY(600px);
   }
-  10%,
-  40% {
-    opacity: 0.85;
+  to {
+    transform: translateY(0);
   }
-  55%,
+}
+@keyframes hgt-wave {
+  0%,
+  18% {
+    transform: translateY(680px);
+  }
+  45%,
   100% {
-    stroke-dashoffset: -0.95;
-    opacity: 0;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 1023px) {
+  .hgt-plane {
+    width: 140%;
+  }
+  .hgt-ceiling {
+    height: 170px;
+  }
+  .hgt-floor {
+    bottom: 80px;
+    height: 340px;
+  }
+}
+@media (max-width: 639px) {
+  .hgt-plane {
+    width: 200%;
+  }
+  .hgt-ceiling {
+    top: 72px;
+    height: 145px;
+    opacity: 0.75;
+  }
+  .hgt-floor {
+    bottom: 190px;
+    height: 330px;
+    min-height: 0;
+    opacity: 0.3;
   }
 }
 
@@ -418,7 +492,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hg-beam {
+  .hgt-pulse,
+  .hgt-wave {
     display: none;
   }
   .mic.is-on,

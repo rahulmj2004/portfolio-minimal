@@ -1,78 +1,159 @@
+"use client";
+
 /**
- * Hero background: a faint perspective grid (a tunnel of lines meeting behind the headline)
- * with a few thin lights gliding along it.
- * Pure SVG, no JS.
+ * Hero background: a perspective "tunnel" made of two grid planes (ceiling + floor).
+ * Lanes fan out from a narrow far edge and bend into straight verticals near the viewer.
+ * Glowing pulses run down random lanes, and every ~20s a soft wave sweeps the whole grid.
+ * Pure SVG + CSS animation; pauses when off-screen, when the tab is hidden, or with reduced motion.
  */
-import type { CSSProperties } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
-const W = 1200;
-const H = 800;
-const VX = W / 2;
-const VY = H / 2;
+const VW = 1248; // viewBox width
+const VH = 440; // viewBox height
+const MID = VW / 2;
+const EDGE = 24; // side padding of the near (vertical) lanes
+const LANES = 15;
+const FAR_SCALE = 0.42; // how narrow the far edge is compared with the near edge
 
-// lines fanning out from the vanishing point to the top and bottom edges
-const fanX = Array.from({ length: 21 }, (_, i) => -600 + i * 120);
-// horizontal lines get closer together near the middle, like real perspective
-const depths = [1, 1.45, 2.1, 3.1, 4.6];
-const rows = depths.flatMap((z) => [VY - VY / z, VY + VY / z]);
+type Plane = { grid: string; lanes: string[] };
 
-// a few lines carry a thin light that glides outward: [end x, top or bottom, duration s, delay s]
-const beams: [number, "t" | "b", number, number][] = [
-  [-120, "t", 7, 0],
-  [1560, "b", 7.5, 2.4],
-  [960, "t", 6.5, 4.6],
-  [240, "b", 8, 6.2],
-];
+/** Build one plane. `bend` = fraction of the height where lanes turn vertical. */
+function buildPlane(bend: number): Plane {
+  const by = VH * bend;
+  const r = Math.min(22, (VH - by) / 6); // corner radius of the bend
+  const lanes: string[] = [];
+  for (let i = 0; i < LANES; i++) {
+    const near = EDGE + ((VW - 2 * EDGE) * i) / (LANES - 1);
+    const far = MID + (near - MID) * FAR_SCALE;
+    // point on the slanted segment just before the bend
+    const sx = near + (r / by) * (far - near);
+    lanes.push(`M ${far} 0 L ${sx} ${by - r} Q ${near} ${by} ${near} ${by + r} V ${VH}`);
+  }
+  // depth rows across the slanted part (closer together far away)
+  const slanted = [0, 0.12, 0.29, 0.52, 0.81].map((t) => {
+    const half = (MID - EDGE) * (FAR_SCALE + (1 - FAR_SCALE) * t);
+    return `M ${MID - half} ${t * by} H ${MID + half}`;
+  });
+  // rows across the vertical part
+  const straight = [0.25, 0.57, 0.92].map((t) => `M ${EDGE} ${by + (VH - by) * t} H ${VW - EDGE}`);
+  return { grid: [...lanes, ...slanted, ...straight].join(" "), lanes };
+}
 
-export function HeroGrid() {
+const CEILING = buildPlane(0.85);
+const FLOOR = buildPlane(0.7);
+
+type Pulse = { id: number; lane: number };
+
+/** Spawn a pulse on a random free lane every `every` ms, at most 3 at a time. */
+function usePulses(running: boolean, every: number) {
+  const [pulses, setPulses] = useState<Pulse[]>([]);
+  const live = useRef<Pulse[]>([]);
+  const nextId = useRef(0);
+  const lastLane = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!running) return;
+    const spawn = () => {
+      if (live.current.length >= 3) return;
+      const free = Array.from({ length: LANES }, (_, i) => i).filter(
+        (i) => i !== lastLane.current && !live.current.some((p) => p.lane === i),
+      );
+      const lane = free[Math.floor(Math.random() * free.length)];
+      lastLane.current = lane;
+      live.current = [...live.current, { id: nextId.current++, lane }];
+      setPulses(live.current);
+    };
+    if (live.current.length === 0) spawn();
+    const t = window.setInterval(spawn, every);
+    return () => window.clearInterval(t);
+  }, [running, every]);
+
+  const done = (id: number) => {
+    live.current = live.current.filter((p) => p.id !== id);
+    setPulses(live.current);
+  };
+  return { pulses, done };
+}
+
+function GridPlane({ id, kind, pulses, onDone }: { id: string; kind: "ceiling" | "floor"; pulses: Pulse[]; onDone: (id: number) => void }) {
+  const { grid, lanes } = kind === "ceiling" ? CEILING : FLOOR;
   return (
-    <div aria-hidden className="hero-grid pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" className="size-full">
+    <div className={`hgt-plane hgt-${kind}`}>
+      <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" focusable="false">
         <defs>
-          <radialGradient id="hg-fade" cx="50%" cy="50%" r="62%">
-            <stop offset="0.18" stopColor="#fff" stopOpacity="0" />
-            <stop offset="0.55" stopColor="#fff" stopOpacity="1" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0.5" />
-          </radialGradient>
-          <filter id="hg-soft" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="b" />
+          <filter id={`${id}-glow`} filterUnits="userSpaceOnUse" x="-12" y="-12" width={VW + 24} height={VH + 24} colorInterpolationFilters="sRGB">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="halo" />
             <feMerge>
-              <feMergeNode in="b" />
+              <feMergeNode in="halo" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <mask id="hg-mask">
-            <rect width={W} height={H} fill="url(#hg-fade)" />
+          {/* bright head, soft tail */}
+          <linearGradient id={`${id}-light`} x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stopColor="currentColor" stopOpacity="0" />
+            <stop offset="0.65" stopColor="currentColor" stopOpacity="0.35" />
+            <stop offset="0.9" stopColor="currentColor" />
+            <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+          <mask id={`${id}-grid`} maskUnits="userSpaceOnUse" x="0" y="0" width={VW} height={VH}>
+            <path d={grid} fill="none" stroke="white" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
           </mask>
+          {pulses.map((p) => (
+            <mask key={p.id} id={`${id}-lane-${p.id}`} maskUnits="userSpaceOnUse" x="0" y="0" width={VW} height={VH}>
+              <path d={lanes[p.lane]} fill="none" stroke="white" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+            </mask>
+          ))}
         </defs>
-        <g mask="url(#hg-mask)">
-          <g className="hg-lines" fill="none" strokeWidth="1" vectorEffect="non-scaling-stroke">
-            {fanX.map((x) => (
-              <g key={x}>
-                <line x1={VX} y1={VY} x2={x} y2={0} vectorEffect="non-scaling-stroke" />
-                <line x1={VX} y1={VY} x2={x} y2={H} vectorEffect="non-scaling-stroke" />
+        <g transform={kind === "ceiling" ? `translate(0 ${VH}) scale(1 -1)` : undefined}>
+          <path className="hgt-lines" d={grid} fill="none" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          <g filter={`url(#${id}-glow)`}>
+            {pulses.map((p) => (
+              <g key={p.id} mask={`url(#${id}-lane-${p.id})`}>
+                <rect className="hgt-pulse" x="0" y="-140" width={VW} height="140" fill={`url(#${id}-light)`} onAnimationEnd={() => onDone(p.id)} />
               </g>
             ))}
-            {rows.map((y) => (
-              <line key={y} x1={0} y1={y} x2={W} y2={y} vectorEffect="non-scaling-stroke" />
-            ))}
-          </g>
-          <g filter="url(#hg-soft)">
-            {beams.map(([x, side, dur, delay]) => (
-              <line
-                key={`${x}${side}`}
-                className="hg-beam"
-                x1={VX}
-                y1={VY}
-                x2={x}
-                y2={side === "t" ? 0 : H}
-                pathLength={1}
-                style={{ "--dur": `${dur}s`, "--delay": `${delay}s` } as CSSProperties}
-              />
-            ))}
+            <g mask={`url(#${id}-grid)`}>
+              <rect className="hgt-wave" x="0" y="-220" width={VW} height="220" fill={`url(#${id}-light)`} />
+            </g>
           </g>
         </g>
       </svg>
+    </div>
+  );
+}
+
+export function HeroGrid() {
+  const id = `hgt-${useId().replace(/:/g, "")}`;
+  const ref = useRef<HTMLDivElement>(null);
+  const [running, setRunning] = useState(false);
+  const ceiling = usePulses(running, 1500);
+  const floor = usePulses(running, 1000);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let visible = false;
+    const update = () => setRunning(visible && !document.hidden && !reduce.matches);
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      update();
+    });
+    io.observe(el);
+    document.addEventListener("visibilitychange", update);
+    reduce.addEventListener("change", update);
+    return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", update);
+      reduce.removeEventListener("change", update);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} aria-hidden className="hgt" data-running={running}>
+      <GridPlane id={`${id}-ceiling`} kind="ceiling" pulses={ceiling.pulses} onDone={ceiling.done} />
+      <GridPlane id={`${id}-floor`} kind="floor" pulses={floor.pulses} onDone={floor.done} />
+      <div className="hgt-fade" />
     </div>
   );
 }
