@@ -187,7 +187,7 @@ export default function Home() {
                 width={240}
                 height={240}
                 priority
-                className="size-24 rounded-full object-cover object-top ring-4 ring-white md:size-30"
+                className="size-24 rounded-full object-cover object-top shadow-[0_10px_30px_rgba(22,22,22,0.12)] ring-4 ring-white md:size-30"
               />
               <span className="absolute -right-24 top-8 rotate-[10deg] rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold shadow-[0_4px_14px_rgba(0,0,0,0.08)] md:-right-26 md:top-10">
                 {profile.name} 👋
